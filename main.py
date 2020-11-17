@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup, SoupStrainer
 import numpy as np
 from scipy.linalg import solve
 
-U = []
 def getLinks(url):
     http = httplib2.Http()
     try:
@@ -14,8 +13,11 @@ def getLinks(url):
     links = []
     for link in BeautifulSoup(response, parse_only=SoupStrainer('a'), features="html.parser"):
         if link.has_attr('href'):
-            if 'https' in link['href']:
-                links.append(link['href'])
+            if not('tel' in link['href']):
+                if 'https' in link['href']:
+                    links.append(link['href'])
+                elif ('//' in link['href'] and not ('http' in link['href'])):
+                    links.append('https:' + link['href'])
 
     return links
 
@@ -26,20 +28,12 @@ def getHash(url):
     return len(url) + 1024*sum
 
 def getLinksNum(url, n):
-    #print('test')
-    # create U, nx1 column vector of URLs
-    global U
     U = [0]*n
-    # create hash, nx1 column vector of zeros
     hash_list = [0]*n
-    # create G, an nxn matrix where G(i,j) = 1 if node j is linked to node i
     G = [[0 for x in range(n)] for y in range(n)]
-    # set U[0][0] = url
     m = 0
     U[m] = url
-    # hash[0] = getHash(url)
     hash_list[m] = getHash(url)
-    # for j = 0 to n
     for j in range(n):
         print('J: ', end='');
         print(j, end=' ')
@@ -48,48 +42,65 @@ def getLinksNum(url, n):
         links = getLinks(U[j])
         print(len(links))
         if links != []:
-
-    # try to open the page at U[j]
-    # for link on page U[j]
-            loc = 0
             for link in links:
-                loc = 0
+                loc = -1
                 for i in range(m):
                     if hash_list[i] == getHash(link):
-                        if (U[i] == link):
+                        if (link in U[i] and len(link) == len(U[i])):
                             loc = i
-                if (loc == 0 and m < n-1):
-                    m = m+1
+                            break
+                if (loc == -1 and m < n-1):
+                    m = m + 1
                     U[m] = link
                     hash_list[m] = getHash(link)
                     loc = m
-                if (loc > 0):
-                    #print(link)
+                if (loc >= 0):
                     G[loc][j] = 1
 
-        else:
-            j = j-2
     for m in range(n):
         print(m, end='')
         print(' ', end='')
         print(U[m])
+    Dc = [[0 for x in range(n)] for y in range(n)]
     for i in range(n):
+        sum = 0
         for j in range(n):
-            print(G[i][j], end='')
-            print(' ', end='')
-        print('')
-    # check if page is already in url list
-    # iterate thorugh hash and if hash = gethash(current url), check is url and
-    # U[hashnum] = current url
-    # add new url to graph if fewer than n
-    # add a new link
+            sum = sum + G[j][i]
+        if sum == 0:
+            Dc[i][i] = 0
+        else:
+            for k in range(n):
+                Dc[j][i] = float(float(1) / float(sum))
+    I = [[0 for x in range(n)] for y in range(n)]
+    for i in range(n):
+        I[i][int(i)] = float(1)
+    p = [[float(0.85) for x in range(1)] for y in range(n)]
+    e = [[float(1) for x in range(1)] for y in range(n)]
+    A = [[0 for x in range(n)] for y in range(n)]
+    A = np.multiply(np.multiply(np.array(G), p), np.array(Dc))
+    A = np.subtract(I, A)
+    x = solve(A, e)
+    y = [1] * n
+    for i in range(n):
+        y[i] = x[i][0] * 10.0
+    print(solve(A, e))
+
+    indices = np.argsort(y)
+    print(indices)
+    w = 0
+    for i in range(n - 1, 0, -1):
+        print(y[indices[i]])
+        print(U[indices[w]])
+        w = w+1
     return G
 
 def page_rank(G, n):
     # remove self links from G
-    for i in range(n):
-        if G[i][i] == 1:
-            G[i][i] == 0
+    #for i in range(n):
+        #if G[i][i] == 1:
+            #G[i][i] == 0
+    #G = np.matrix(G).transpose()
+    #G = np.array(G).transpose()
     # create dc of size n xn
     Dc = [[0 for x in range(n)] for y in range(n)]
     for i in range(n):
@@ -99,29 +110,86 @@ def page_rank(G, n):
         if sum == 0:
            Dc[i][i] = 0
         else:
-            Dc[i][i] = 1/sum
+            #print('I: ')
+            #print(i)
+            #print(sum)
+            Dc[i][i] = float(float(1)/float(sum))
+            if (i == 0):
+                print('I is equal to zero!')
+                print(sum)
     # create I
     I = [[0 for x in range(n)] for y in range(n)]
     for i in range(n):
-        I[i][i] = 1
-    p = 0.85
+        I[i][i] = float(1)
+    p = float(0.85)
     # create e
-    e = [1] * n
+
+
+
+
+    # make e and x into column vectors!!!
+
+
+    #e = [float(1)] * n
+    e = [[float(1) for x in range(1)] for y in range(n)]
     A = [[0 for x in range(n)] for y in range(n)]
-    A = np.subtract(I, np.multiply(np.multiply(p, G), Dc))
-    x = [1] * n
+    #A = np.multiply(p, np.multiply(G, Dc))
+    A = np.subtract(I,np.multiply(p, Dc))
+    print("HEREG")
+    print(G[0][0])
+    #for i in range(n):
+            #Dc[i][i] = p*Dc[i][i]
+    print("HERE")
+    print(Dc[0][0])
+    #A = np.subtract(I, np.multiply(p, np.multiply(G, Dc)))
+    #for i in range(n):
+        #I[i][i] = float(1)-Dc[i][i]
+    #A = np.subtract(I, Dc)
+    print("HERE")
+    print(I[0][0])
+    print(A[0][0])
+    #for i in range(n):
+       # Dc[i][i] = Dc[i][i]*0.85
+    #for i in range(n):
+        #for j in range(n):
+            #for k in range(n):
+               # A[i][j] += G[i][k] * Dc[k][j]
+    #print("HERE")
+    #print(A[0][0])
+   # for i in range(n):
+        #A[i][i] = float(1) - A[i][i]
+    #x = [1] * n
+    x = [[float(1) for x in range(1)] for y in range(n)]
     x = solve(A, e)
+    #x = np.linsolve(A, e)
     y = [1] * n
-    y = solve(A, e)
-    y = y.sort()
+    #y = solve(A, e)
+    #y = np.linsolve(A,e)
+    #y = y.sort()
+    for i in range(n):
+        y[i] = x[i][0]
     print(solve(A, e))
-    indices =np.argsort(x)
+    #indices =np.argsort(x)
+    indices = np.argsort(y)
     print(indices)
-    print(x[indices[99]])
-    print(U)
-    for i in range(n-1,n-10,-1):
-        print(x[indices[i]])
-        print(U[indices[i]])
+    #print(y[indices[99]])
+    #print(U[indices[99]])
+    for i in range(n-1,0,-1):
+        print(y[indices[i]])
+        #print(U[indices[i]])
+    sum1 = 0
+    for i in range(n):
+        if G[61][i] == 1:
+            sum1 = sum1 + 1
+    sum2 = 0
+    for i in range(n):
+        if G[0][i] == 1:
+            sum2 = sum2+1
+    print(sum1)
+    print(sum2)
+    for j in range(100):
+        print(A[j][0])
+    print(indices)
 
 
     # solve the matrix equation x = (I-p*G*Dc)\e
@@ -129,8 +197,13 @@ def page_rank(G, n):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     #getLinks('https://www.purdue.edu/')
-    G = getLinksNum('https://www.purdue.edu/', 100)
-    page_rank(G, 100)
+    G = getLinksNum('https://www.purdue.edu', 5)
+    #print(U[0])
+    #np.matrix(G).view()
+    #G = np.transpose(G)
+    #page_rank(G, 100)
+    #for j in range(100):
+        #print(G[j][75])
     #getLinksNum('https://www.harvard.edu/', 85)
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
