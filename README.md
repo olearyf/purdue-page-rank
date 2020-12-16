@@ -11,3 +11,6 @@ A simple script that takes the first 100 links it finds by walking down the list
  - #8 Rank Value: [[4.84837967]] URL: ['https://www.purdue.edu/purdue/ea_eou_statement.php']
  - #9 Rank Value: [[4.71570977]] URL: ['https://one.purdue.edu']
  - #10 Rank Value: [[4.31497709]] URL: ['https://www.purdue.edu/boilerconnect/']
+ ### Highlight
+ Below is an image of a visualization I generated in Matlab of the digraph adjacency matrix for the 100 sites I analyzed:
+ ![](https://github.com/olearyf/purdue-page-rank/blob/master/sparse.jpg)
